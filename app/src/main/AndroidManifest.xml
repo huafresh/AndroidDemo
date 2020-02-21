@@ -2,15 +2,21 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.hua.leanwms">
 
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+
     <application
         android:allowBackup="true"
         android:label="@string/app_name"
+        android:theme="@style/Theme.AppCompat.Light.NoActionBar"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme">
+        >
         <activity
-            android:name=".MainActivity"
+            android:name="com.hua.camerademo.CameraActivity"
             android:launchMode="singleTop"
-            android:screenOrientation="portrait">
+            android:screenOrientation="sensor">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
