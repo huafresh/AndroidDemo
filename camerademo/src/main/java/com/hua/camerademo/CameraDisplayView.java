@@ -81,9 +81,10 @@ public class CameraDisplayView extends SurfaceView
             setCameraDisplayOrientation(((Activity) getContext()), mCameraId, mCamera);
             printSupportedSize();
             Camera.Parameters parameters = mCamera.getParameters();
-            resizeSurfaceSizeToFitPreviewSize(parameters);
+            setPreviewSize(parameters);
             setPictureSize(parameters);
-            // mCamera.setPreviewCallback(this);
+            resizeSurfaceSizeToFitPreviewSize(parameters);
+            mCamera.setParameters(parameters);
             mCamera.startPreview();
         } catch (Exception e) {
             e.printStackTrace();
@@ -102,32 +103,47 @@ public class CameraDisplayView extends SurfaceView
         }
     }
 
+    @SuppressWarnings("SuspiciousNameCombination")
     private void resizeSurfaceSizeToFitPreviewSize(Camera.Parameters parameters) {
-        Camera.Size size = findProperSize(parameters.getSupportedPreviewSizes(), getHeight(), getWidth());
+        Camera.Size size = parameters.getPreviewSize();
         if (size != null) {
-            parameters.setPreviewSize(size.width, size.height);
-            int previewRatio = size.width / size.height;
-            int surfaceRatio = getHeight() / getWidth();
-            int newWidth = getWidth();
-            int newHeight = getHeight();
+            // 调整策略：在宽高不超过屏幕的情况下，满足preview的宽高比
+            float previewRatio = size.width * 1.0f / size.height;
+            // todo 这里直接宽高反转，其实这里应该判断相机的orientation值的，并不是所有手机的orientation都为90
+            int surfaceWidth = getHeight();
+            int surfaceHeight = getWidth();
+            Log.d("@@@hua", "adjust surfaceView origin. width = " + surfaceHeight + ", height = " + surfaceWidth);
+            float surfaceRatio = surfaceWidth * 1.0f / surfaceHeight;
             if (previewRatio > surfaceRatio) {
-                // 此时surface比例要变大，要不增大分子，要不减少分母，因为surfaceView本身已经
-                // match_parent了，所以不能再增大了，故需要固定分子，减少分母；
-                newWidth = getWidth() / previewRatio;
+                // 此时surface比例要变大，要不增大分子，要不减少分母，因为surfaceView本身是
+                // match_parent的，因此不能减少宽高，但可以增大宽高，因为增大只是会使内容增大而已，
+                // 不会改变surfaceView match_parent这一点。
+                // 故需要固定分母，增大分子；
+                surfaceWidth = (int) (surfaceHeight * previewRatio);
             } else if (previewRatio < surfaceRatio) {
                 // 反之即可
-                newHeight = getHeight() * previewRatio;
+                surfaceHeight = (int) (surfaceWidth / previewRatio);
             }
             ViewGroup.LayoutParams layoutParams = getLayoutParams();
-            layoutParams.width = newWidth;
-            layoutParams.height = newHeight;
+            layoutParams.width = surfaceHeight;
+            layoutParams.height = surfaceWidth;
+            Log.d("@@@hua", "adjust surfaceView. width = " + surfaceHeight + ", height = " + surfaceWidth);
             setLayoutParams(layoutParams);
+        }
+    }
+
+    private void setPreviewSize(Camera.Parameters parameters) {
+        Camera.Size size = findProperSize(parameters.getSupportedPreviewSizes(), getHeight(), getWidth());
+        if (size != null) {
+            Log.d("@@@hua", "set preview size, width = " + size.width + ", height = " + size.height);
+            parameters.setPreviewSize(size.width, size.height);
         }
     }
 
     private void setPictureSize(Camera.Parameters parameters) {
         Camera.Size size = findProperSize(parameters.getSupportedPictureSizes(), getHeight(), getWidth());
         if (size != null) {
+            Log.d("@@@hua", "set picture size, width = " + size.width + ", height = " + size.height);
             parameters.setPictureSize(size.width, size.height);
         }
     }
@@ -248,6 +264,7 @@ public class CameraDisplayView extends SurfaceView
                             int rotation = exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION,
                                     ExifInterface.ORIENTATION_NORMAL);
                             Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+                            Log.d("@@@hua", "taken picture. width = " + bitmap.getWidth() + ", height = " + bitmap.getHeight());
                             if (rotation != 0) {
                                 // 需要旋转
                                 Matrix matrix = new Matrix();
